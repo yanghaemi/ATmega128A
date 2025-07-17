@@ -169,15 +169,15 @@ ISR(TIMER1_COMPA_vect){
 	PORTB=0x20;   // dimmer LED light on
 	
 	if(mode == 1){ // fast PWM 오실로스코프 듀티 정렬 확인용
-		PORTA|=0x80;
+		PORTA^=0x80;
 		PORTA&=0b10011111;
 	}
 	else if(mode == 2){	// pc pwm 오실로스코프 듀티 정렬 확인용
-		PORTA|=0b01000000;
+		PORTA^=0b01000000;
 		PORTA&=0b01011111;
 	}
 	else if(mode == 3){
-		PORTA|=0b00100000;
+		PORTA^=0b00100000;
 		PORTA&=0b00111111;
 	}
 }
