@@ -1,26 +1,29 @@
-/* sw1로 fast PWM과 Phase Correct PWM를 변경할 수 있다.
-
+/* sw1로 timer1 mode를 fast PWM과 Phase Correct PWM로 변경할 수 있다.
   7/17 TASK:
 - [v] 듀티 87.5% 지정
 - [v] 주파수 35Hz로 지정
-- [ ] 듀티 파형 왼쪽 정렬, 오른쪽 정렬, 가운데 정렬 하기
+- [v] 듀티 파형 왼쪽 정렬(mode 1), 오른쪽 정렬(mode 2), 가운데 정렬(mode 3) 하기
 */
 
 #define F_CPU 16000000UL
-#define F_PCPWM 35  // phase correct PWM 주파수
-#define F_FPWM 35  // Fast PWM 주파수
+#define F_PCPWM 35
+#define F_FPWM 35
+
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
-volatile int top = 0; 
-volatile int mode=1; // 1 : fast pwm , 2: pc pwm
+volatile int top = 0;
+volatile int mode=1; // 1 : fast pwm (non-inverting mode) (왼쪽 정렬) , 2: fast pwm (inverting mode) (오른쪽 정렬), 3: pc pwm(가운데)
 volatile int duty_mode = 1; // 1: 100%, 2: 80%, 3: 60%, 4: 40%, 5: 20%
 
 
 
-void set_pwm_duty(volatile uint16_t percent) {
+void set_pwm_duty(uint16_t percent) {
+	if(mode == 2)
+		percent = 100 - percent; // inverting mode 시 percent 반전
+		
 	//volatile uint16_t temp_percent = percent;  // 디버깅용
 	if (percent > 100) percent = 100;
 	uint16_t ocr = (percent * top) / 100;
@@ -77,15 +80,15 @@ void set_timer1_Fast_PWM(int n){
 	top = (F_CPU/n/F_FPWM)-1;
 	
 	ICR1H = top >> 8;
-	ICR1L = (uint8_t)top;	// 주파수를 지정해주기 위한 top 계산
+	ICR1L = (uint8_t)top;
 	
 	TIMSK |= 1 << OCIE1A;
 	
 	duty_mode=1;
 	set_pwm_duty(100);
 	PORTA = 0x01;
-	
 }
+
 
 void set_timer1_PC_PWM(int n){
 	TCCR1A |= (1<<COM1A1)| (1<<WGM11); // non-inverting mode
@@ -102,7 +105,6 @@ void set_timer1_PC_PWM(int n){
 	duty_mode=1;
 	set_pwm_duty(100);
 	PORTA = 0x01;
-	
 }
 
 
@@ -134,13 +136,21 @@ ISR(INT4_vect){   // sw1
 	if(mode == 1){ // 1 -> 2 모드 변경
 		mode = 2;
 		reset_timer1();
+		set_timer1_Fast_PWM(1024);
+		TCCR1A |= (1<<COM1A0); // inverting mode
+		
+	}
+	else if(mode == 2){	// 2 -> 3 모드 변경
+		mode = 3;
+		reset_timer1();
 		set_timer1_PC_PWM(1024);
 	}
-	else if(mode == 2){   // 2 -> 1 모드 변경
+	else if(mode == 3){   // 3 -> 1 모드 변경
 		mode = 1;
 		reset_timer1();
 		set_timer1_Fast_PWM(1024);
 	}
+	
 }
 
 ISR(INT5_vect){   // sw2
@@ -159,11 +169,15 @@ ISR(TIMER1_COMPA_vect){
 	PORTB=0x20;   // dimmer LED light on
 	
 	if(mode == 1){ // fast PWM 오실로스코프 듀티 정렬 확인용
-		PORTA^=0x80;
-		PORTA&=0b10111111;
+		PORTA|=0x80;
+		PORTA&=0b10011111;
 	}
 	else if(mode == 2){	// pc pwm 오실로스코프 듀티 정렬 확인용
-		PORTA^=0b01000000;
-		PORTA&=0b01111111;
+		PORTA|=0b01000000;
+		PORTA&=0b01011111;
+	}
+	else if(mode == 3){
+		PORTA|=0b00100000;
+		PORTA&=0b00111111;
 	}
 }
