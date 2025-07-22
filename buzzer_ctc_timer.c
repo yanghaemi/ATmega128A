@@ -129,10 +129,10 @@ void change_pitch(char c){
 	}
 	else if (c=='3'){
 		const unsigned int SCHOOL_BELL[28] = {
-			SOL, SOL, MI, MI, SOL, SOL, MI,
-			SOL, SOL, FA, FA, MI, MI, RE,
-			SOL, SOL, MI, MI, SOL, SOL, MI,
-			SOL, SOL, FA, FA, MI, MI, RE
+			SOL, SOL, RA, RA, SOL, SOL, MI, MI,
+			SOL, SOL, MI, MI, RE, RE, RE, RE,
+			SOL, SOL, RA, RA, SOL, SOL, MI, MI,
+			SOL, SOL, RE, MI, DO, DO, DO, DO
 		};
 		
 		for(int i =0;i<(sizeof(SCHOOL_BELL)/sizeof(int));i++){
@@ -174,6 +174,8 @@ int main(){
 		char c = uart_receive();
 		change_pitch(c);
 		uart_flush();
+		
+		OCR0 = 0; // 노래 끝
 	}
 }
 
